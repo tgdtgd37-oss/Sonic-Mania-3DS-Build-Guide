@@ -1,0 +1,50 @@
+name: Compile Sonic Mania 3DS
+
+on:
+  workflow_dispatch: # Allows you to trigger the build manually with a button click
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code Base
+        uses: actions/checkout@v4
+
+      - name: Setup devkitPro 3DS Environment
+        uses: devkitPro/devkitpro-action@v2
+        with:
+          dkp-packages: |
+            3ds-dev
+            libctru
+            3ds-sdl
+            3ds-libtheora
+
+      - name: Download Repositories & Compile
+        run: |
+          # 1. Download the core game source trees safely
+          git clone https://github.com
+          git clone https://github.com --recursive
+          
+          # 2. Switch to the 3DS platform code branch
+          cd RSDKv5-Decompilation
+          git checkout 3ds-main
+          rm -rf Game
+          
+          # 3. Align the game modules
+          cd ../Sonic-Mania-Decompilation
+          mv SonicMania ../RSDKv5-Decompilation/Game
+          
+          # 4. Inject the C++ compilation overrides and link targets safely into the Makefile configuration
+          cd ../RSDKv5-Decompilation
+          sed -i 's|CXXFLAGS\s*:=|CXXFLAGS := -fexceptions -DRETRO_USE_PLUS -DREV02 |g' Makefile
+          sed -i 's|CFLAGS\s*:=|CFLAGS := -DRETRO_USE_PLUS -DREV02 |g' Makefile
+          sed -i 's|LD\s*:=\s*\$(CC)|LD := $(CXX)|g' Makefile
+          
+          # 5. Execute compilation using the standard hardware target variables natively
+          make PLATFORM=3DS
+
+      - name: Upload Finished Executable Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sonic-Mania-3DS-Executable
+          path: RSDKv5-Decompilation/bin/3DS/CTR/sonicmania.3dsx
