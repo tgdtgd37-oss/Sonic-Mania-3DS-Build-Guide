@@ -5,32 +5,39 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04 # Pin to a stable Linux image to prevent environmental shifting
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code Base
         uses: actions/checkout@v4
 
       - name: Install System Dependencies & devkitPro Tools
         run: |
-          # 1. Update system databases and install basic build tools
+          # 1. Update system databases and install basic build tools non-interactively
           sudo apt-get update
-          sudo apt-get install -y build-essential git wget make
+          sudo apt-get install -y build-essential git wget make xz-utils libarchive-tools
 
-          # 2. Download and run the official devkitPro installer tool directly
+          # 2. Download the official automated script using the browser identity profile
           wget -U "dkp-apt" https://devkitpro.org
           chmod +x ./install-devkitpro-pacman
-          sudo ./install-devkitpro-pacman --noconfirm
+          
+          # 3. Force completely silent execution to prevent script interactive hangups
+          DEBIAN_FRONTEND=noninteractive yes | sudo ./install-devkitpro-pacman --noconfirm
 
-          # 3. Explicitly install the specific 3DS architecture and rendering libraries
+          # 4. Manually declare key sync database targets to bypass package signature checks
+          sudo /opt/devkitpro/pacman/bin/pacman-key --init
+          sudo /opt/devkitpro/pacman/bin/pacman-key --populate
+
+          # 5. Explicitly install the specific 3DS architecture tools and rendering libraries
           sudo /opt/devkitpro/pacman/bin/pacman -S 3ds-dev libctru 3ds-sdl 3ds-libtheora --noconfirm
 
       - name: Download Repositories & Compile
         run: |
-          # Set devkitPro tracking folders inside the active script instance
+          # Declare tool directories explicitly inside the running container session
           export DEVKITPRO=/opt/devkitpro
           export DEVKITARM=$DEVKITPRO/devkitARM
+          export PATH=$DEVKITPRO/devkitARM/bin:$PATH
 
-          # 1. Download the core game source trees safely
+          # 1. Download the core game source trees safely using decoupled string fragments
           git clone https://github.com
           git clone https://github.com --recursive
           
@@ -43,13 +50,18 @@ jobs:
           cd ../Sonic-Mania-Decompilation
           mv SonicMania ../RSDKv5-Decompilation/Game
           
-          # 4. Inject the C++ compilation overrides and link targets safely into the Makefile configuration
+          # 4. Hardcode exception flags and revision targets directly into the compiler layout parameters
           cd ../RSDKv5-Decompilation
-          sed -i 's|CXXFLAGS\s*:=|CXXFLAGS := -fexceptions -DRETRO_USE_PLUS -DREV02 |g' Makefile
-          sed -i 's|CFLAGS\s*:=|CFLAGS := -DRETRO_USE_PLUS -DREV02 |g' Makefile
+          sed -i 's|CXXFLAGS\s*:=|CXXFLAGS := -mfloat-abi=hard -mfpu=vfpv3 -fexceptions -DRETRO_USE_PLUS -DREV02 |g' Makefile
+          sed -i 's|CFLAGS\s*:=|CFLAGS := -mfloat-abi=hard -mfpu=vfpv3 -DRETRO_USE_PLUS -DREV02 |g' Makefile
+          sed -i 's|LDFLAGS\s*:=|LDFLAGS := -specs=3dsx.specs -mfloat-abi=hard -mfpu=vfpv3 |g' Makefile
+          sed -i 's|LIBS\s*:=|LIBS := -lstdc++ |g' Makefile
           sed -i 's|LD\s*:=\s*\$(CC)|LD := $(CXX)|g' Makefile
           
-          # 5. Execute compilation using the standard hardware target variables natively
+          # 5. Fix duplicate variable declaration in Reader.cpp code before building
+          sed -i '350s/char pathBuf/ \/\/ char pathBuf/' RSDKv5/RSDK/Core/Reader.cpp
+
+          # 6. Execute compilation natively
           make PLATFORM=3DS
 
       - name: Upload Finished Executable Bundle
@@ -57,4 +69,3 @@ jobs:
         with:
           name: Sonic-Mania-3DS-Executable
           path: RSDKv5-Decompilation/bin/3DS/CTR/sonicmania.3dsx
-
