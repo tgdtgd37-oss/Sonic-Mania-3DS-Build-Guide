@@ -8,17 +8,17 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code Base
-        uses: actions/checkout@v5 # Upgraded to v5 to officially fix the Node 20 deprecation warning
+        uses: actions/checkout@v5
 
       - name: Install System Dependencies & devkitPro Tools
         run: |
           # 1. Update system databases and install basic requirements non-interactively
           sudo apt-get update
-          sudo apt-get install -y build-essential git wget make xz-utils libarchive-tools gnupg
+          sudo apt-get install -y build-essential git wget make xz-utils libarchive-tools gnupg curl
 
-          # 2. Securely register the devkitPro GPG signature key manually into the system keyrings folder
+          # 2. Securely register the devkitPro GPG signature key using curl to bypass the block
           sudo mkdir -p /usr/local/share/keyring
-          wget -qO- https://devkitpro.org | sudo gpg --dearmor -o /usr/local/share/keyring/devkitpro-pub.gpg
+          curl -sSL https://devkitpro.org | sudo gpg --dearmor -o /usr/local/share/keyring/devkitpro-pub.gpg
 
           # 3. Add the devkitPro stable Linux package repository destination to apt sources
           echo "deb [signed-by=/usr/local/share/keyring/devkitpro-pub.gpg] https://devkitpro.org stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
@@ -71,5 +71,3 @@ jobs:
         with:
           name: Sonic-Mania-3DS-Executable
           path: RSDKv5-Decompilation/bin/3DS/CTR/sonicmania.3dsx
-
-
