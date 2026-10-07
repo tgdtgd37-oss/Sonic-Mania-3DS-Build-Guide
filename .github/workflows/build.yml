@@ -18,10 +18,10 @@ jobs:
 
           # 2. Securely register the devkitPro GPG signature key manually into the system keyrings folder
           sudo mkdir -p /usr/local/share/keyring
-          wget -qO- https://apt.devkitpro.org/devkitpro-pub.gpg | sudo gpg --dearmor -o /usr/local/share/keyring/devkitpro-pub.gpg
+          wget -qO- https://devkitpro.org | sudo gpg --dearmor -o /usr/local/share/keyring/devkitpro-pub.gpg
 
           # 3. Add the devkitPro stable Linux package repository destination to apt sources
-          echo "deb [signed-by=/usr/local/share/keyring/devkitpro-pub.gpg] https://apt.devkitpro.org stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
+          echo "deb [signed-by=/usr/local/share/keyring/devkitpro-pub.gpg] https://devkitpro.org stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
 
           # 4. Sync our newly modified repositories and download the native devkitPro pacman engine
           sudo apt-get update
@@ -41,21 +41,20 @@ jobs:
           export DEVKITARM=$DEVKITPRO/devkitARM
           export PATH=$DEVKITPRO/devkitARM/bin:$PATH
 
-          # 1. Download the core game source trees safely using decoupled string fragments
+          # 1. Download the core game source trees safely
           git clone https://github.com
           git clone https://github.com --recursive
           
-          # 2. Switch to the 3DS platform code branch
+          # 2. Switch to the 3DS platform code branch and clean the template Game folder
           cd RSDKv5-Decompilation
           git checkout 3ds-main
           rm -rf Game
+          mkdir -p Game
           
-          # 3. Align the game modules
-          cd ../Sonic-Mania-Decompilation
-          mv SonicMania ../RSDKv5-Decompilation/Game
+          # 3. Flatten and copy the loose game source code files directly to the root Game folder
+          cp -r ../Sonic-Mania-Decompilation/SonicMania/* Game/
           
           # 4. Hardcode exception flags and revision targets directly into the compiler layout parameters
-          cd ../RSDKv5-Decompilation
           sed -i 's|CXXFLAGS\s*:=|CXXFLAGS := -mfloat-abi=hard -mfpu=vfpv3 -fexceptions -DRETRO_USE_PLUS -DREV02 |g' Makefile
           sed -i 's|CFLAGS\s*:=|CFLAGS := -mfloat-abi=hard -mfpu=vfpv3 -DRETRO_USE_PLUS -DREV02 |g' Makefile
           sed -i 's|LDFLAGS\s*:=|LDFLAGS := -specs=3dsx.specs -mfloat-abi=hard -mfpu=vfpv3 |g' Makefile
