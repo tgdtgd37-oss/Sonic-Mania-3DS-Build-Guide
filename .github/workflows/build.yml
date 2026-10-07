@@ -12,22 +12,26 @@ jobs:
 
       - name: Install System Dependencies & devkitPro Tools
         run: |
-          # 1. Update system databases and install basic build tools non-interactively
+          # 1. Update system databases and install basic requirements non-interactively
           sudo apt-get update
-          sudo apt-get install -y build-essential git wget make xz-utils libarchive-tools
+          sudo apt-get install -y build-essential git wget make xz-utils libarchive-tools gnupg
 
-          # 2. Download the official automated script using the browser identity profile
-          wget -U "dkp-apt" https://devkitpro.org
-          chmod +x ./install-devkitpro-pacman
-          
-          # 3. Force completely silent execution to prevent script interactive hangups
-          DEBIAN_FRONTEND=noninteractive yes | sudo ./install-devkitpro-pacman --noconfirm
+          # 2. Securely register the devkitPro GPG signature key manually into the system keyrings folder
+          sudo mkdir -p /usr/local/share/keyring
+          wget -qO- https://apt.devkitpro.org/devkitpro-pub.gpg | sudo gpg --dearmor -o /usr/local/share/keyring/devkitpro-pub.gpg
 
-          # 4. Manually declare key sync database targets to bypass package signature checks
+          # 3. Add the devkitPro stable Linux package repository destination to apt sources
+          echo "deb [signed-by=/usr/local/share/keyring/devkitpro-pub.gpg] https://apt.devkitpro.org stable main" | sudo tee /etc/apt/sources.list.d/devkitpro.list
+
+          # 4. Sync our newly modified repositories and download the native devkitPro pacman engine
+          sudo apt-get update
+          sudo apt-get install -y devkitpro-pacman
+
+          # 5. Initialize the pacman database signatures inside the devkitPro directory environment
           sudo /opt/devkitpro/pacman/bin/pacman-key --init
           sudo /opt/devkitpro/pacman/bin/pacman-key --populate
 
-          # 5. Explicitly install the specific 3DS architecture tools and rendering libraries
+          # 6. Install the specific 3DS cross-compilers and media decoding packages seamlessly
           sudo /opt/devkitpro/pacman/bin/pacman -S 3ds-dev libctru 3ds-sdl 3ds-libtheora --noconfirm
 
       - name: Download Repositories & Compile
@@ -69,3 +73,4 @@ jobs:
         with:
           name: Sonic-Mania-3DS-Executable
           path: RSDKv5-Decompilation/bin/3DS/CTR/sonicmania.3dsx
+
