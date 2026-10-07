@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout Code Base
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5 # Upgraded to v5 to officially fix the Node 20 deprecation warning
 
       - name: Install System Dependencies & devkitPro Tools
         run: |
@@ -45,14 +45,13 @@ jobs:
           git clone https://github.com
           git clone https://github.com --recursive
           
-          # 2. Switch to the 3DS platform code branch and clean the template Game folder
+          # 2. Switch to the 3DS platform code branch
           cd RSDKv5-Decompilation
           git checkout 3ds-main
-          rm -rf Game
-          mkdir -p Game
           
-          # 3. Flatten and copy the loose game source code files directly to the root Game folder
-          cp -r ../Sonic-Mania-Decompilation/SonicMania/* Game/
+          # 3. Safely wipe the framework's placeholder file and replace it directly with the game logic directory
+          rm -rf Game
+          cp -r ../Sonic-Mania-Decompilation/SonicMania Game
           
           # 4. Hardcode exception flags and revision targets directly into the compiler layout parameters
           sed -i 's|CXXFLAGS\s*:=|CXXFLAGS := -mfloat-abi=hard -mfpu=vfpv3 -fexceptions -DRETRO_USE_PLUS -DREV02 |g' Makefile
@@ -72,4 +71,5 @@ jobs:
         with:
           name: Sonic-Mania-3DS-Executable
           path: RSDKv5-Decompilation/bin/3DS/CTR/sonicmania.3dsx
+
 
