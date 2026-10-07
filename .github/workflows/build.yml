@@ -1,26 +1,35 @@
 name: Compile Sonic Mania 3DS
 
 on:
-  workflow_dispatch: # Allows you to trigger the build manually with a button click
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # Pin to a stable Linux image to prevent environmental shifting
     steps:
       - name: Checkout Code Base
         uses: actions/checkout@v4
 
-      - name: Setup devkitPro 3DS Environment
-        uses: devkitPro/devkitpro-action@v2
-        with:
-          dkp-packages: |
-            3ds-dev
-            libctru
-            3ds-sdl
-            3ds-libtheora
+      - name: Install System Dependencies & devkitPro Tools
+        run: |
+          # 1. Update system databases and install basic build tools
+          sudo apt-get update
+          sudo apt-get install -y build-essential git wget make
+
+          # 2. Download and run the official devkitPro installer tool directly
+          wget -U "dkp-apt" https://devkitpro.org
+          chmod +x ./install-devkitpro-pacman
+          sudo ./install-devkitpro-pacman --noconfirm
+
+          # 3. Explicitly install the specific 3DS architecture and rendering libraries
+          sudo /opt/devkitpro/pacman/bin/pacman -S 3ds-dev libctru 3ds-sdl 3ds-libtheora --noconfirm
 
       - name: Download Repositories & Compile
         run: |
+          # Set devkitPro tracking folders inside the active script instance
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=$DEVKITPRO/devkitARM
+
           # 1. Download the core game source trees safely
           git clone https://github.com
           git clone https://github.com --recursive
@@ -48,3 +57,4 @@ jobs:
         with:
           name: Sonic-Mania-3DS-Executable
           path: RSDKv5-Decompilation/bin/3DS/CTR/sonicmania.3dsx
+
